@@ -55,13 +55,6 @@ jenkins:
         - "Run/Update:authenticated"
 
   # --------------------------------------------------------------------------
-  # LOCATION CONFIGURATION
-  # --------------------------------------------------------------------------
-  location:
-    url: "http://${JENKINS_HOST}:7080/"
-    adminAddress: "${JENKINS_ADMIN_EMAIL}"
-
-  # --------------------------------------------------------------------------
   # QUIET PERIOD
   # --------------------------------------------------------------------------
   quietPeriod: 5
@@ -101,10 +94,25 @@ credentials:
               secret: "${SONARQUBE_TOKEN}"
               description: "SonarQube authentication token"
 
+          # SMTP Credentials for Email
+          - usernamePassword:
+              scope: GLOBAL
+              id: "smtp-credentials"
+              username: "${SMTP_USER}"
+              password: "${SMTP_PASS}"
+              description: "SMTP authentication credentials"
+
 # ==============================================================================
-# SONARQUBE SERVERS
+# UNCLASSIFIED PLUGINS CONFIGURATION
 # ==============================================================================
 unclassified:
+  # ----------------------------------------------------------------------------
+  # JENKINS LOCATION
+  # ----------------------------------------------------------------------------
+  location:
+    url: "http://${JENKINS_HOST}:7080/"
+    adminAddress: "${JENKINS_ADMIN_EMAIL}"
+
   # ----------------------------------------------------------------------------
   # SONARQUBE CONFIGURATION
   # ----------------------------------------------------------------------------
@@ -118,29 +126,21 @@ unclassified:
           skipUpstreamCause: false
 
   # ----------------------------------------------------------------------------
-  # EMAIL NOTIFICATION (STANDARD)
+  # EMAIL NOTIFICATION (STANDARD MAILER)
   # ----------------------------------------------------------------------------
   mailer:
     smtpHost: "${SMTP_SERVER}"
     smtpPort: "${SMTP_PORT}"
     charset: "UTF-8"
-    authentication:
-      username: "${SMTP_USER}"
-      password: "${SMTP_PASS}"
     useSsl: true
     replyToAddress: "${SMTP_REPLY_TO}"
 
   # ----------------------------------------------------------------------------
-  # EXTENDED EMAIL NOTIFICATION
+  # EXTENDED EMAIL NOTIFICATION (NEW FORMAT)
   # ----------------------------------------------------------------------------
-  extendedEmailPublisher:
-    smtpServer: "${SMTP_SERVER}"
-    smtpPort: "${SMTP_PORT}"
-    useSsl: true
+  email-ext:
     charset: "UTF-8"
-    smtpAuthUsername: "${SMTP_USER}"
-    smtpAuthPassword: "${SMTP_PASS}"
-    defaultReplyTo: "${SMTP_REPLY_TO}"
+    defaultContentType: "text/html"
     defaultSubject: "$PROJECT_NAME - Build #$BUILD_NUMBER - $BUILD_STATUS"
     defaultBody: |
       Build Status: $BUILD_STATUS
@@ -149,15 +149,14 @@ unclassified:
       Build URL: $BUILD_URL
 
       Check console output at: ${BUILD_URL}console
-    defaultContentType: "text/html"
     defaultRecipients: "${DEVOPS_EMAIL}"
+    defaultReplyTo: "${SMTP_REPLY_TO}"
     allowUnregisteredEnabled: false
-
-    # Default triggers
-    defaultTriggers:
-      - failure
-      - unstable
-      - success
+    mailAccount:
+      smtpHost: "${SMTP_SERVER}"
+      smtpPort: "${SMTP_PORT}"
+      credentialsId: "smtp-credentials"
+      useSsl: true
 
   # ----------------------------------------------------------------------------
   # GLOBAL LIBRARIES (Shared Pipeline Library)

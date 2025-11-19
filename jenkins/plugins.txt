@@ -2,83 +2,70 @@
 # JENKINS PLUGINS - Essential Plugins for TTS Build System
 # ============================================================================
 # This file lists all plugins to be pre-installed in Jenkins.
-# Format: plugin-id:version (or just plugin-id for latest)
+# Using latest versions - no specific version numbers to avoid 404 errors
 # ============================================================================
 
 # ----------------------------------------------------------------------------
-# CONFIGURATION AS CODE
+# CONFIGURATION AS CODE (REQUIRED)
 # ----------------------------------------------------------------------------
-configuration-as-code:1850.va_a_8c31d3158b_
-configuration-as-code-groovy:1.1
+configuration-as-code
 
 # ----------------------------------------------------------------------------
-# PIPELINE & WORKFLOW
+# PIPELINE & WORKFLOW (CORE)
 # ----------------------------------------------------------------------------
-workflow-aggregator:600.vb_57cdd26fdd7
-pipeline-stage-view:2.34
-pipeline-graph-view:258.v052c20fa_7c8d
-pipeline-model-definition:2.2214.vb_b_34b_2ea_9b_83
-pipeline-utility-steps:2.17.0
+workflow-aggregator
+pipeline-stage-view
+git
+github
+github-branch-source
 
 # ----------------------------------------------------------------------------
-# GIT & SCM
+# CREDENTIALS (REQUIRED)
 # ----------------------------------------------------------------------------
-git:5.6.0
-git-client:6.0.0
-github:1.40.0
-github-branch-source:1797.v86fdb_4d57d43
-credentials:1389.v2b_b_162460502
-credentials-binding:700.v8e723cf36b_58
+credentials
+credentials-binding
 
 # ----------------------------------------------------------------------------
-# BUILD AGENTS
+# BUILD AGENTS (FOR PHASE 2)
 # ----------------------------------------------------------------------------
-ssh-slaves:2.973.v0163957b_95a_0
-swarm:3.45
+ssh-slaves
 
 # ----------------------------------------------------------------------------
 # SONARQUBE INTEGRATION
 # ----------------------------------------------------------------------------
-sonar:2.17.2
+sonar
 
 # ----------------------------------------------------------------------------
 # EMAIL NOTIFICATIONS
 # ----------------------------------------------------------------------------
-email-ext:2.116
-mailer:489.v29b_7acc2a_9e0
+email-ext
+mailer
 
 # ----------------------------------------------------------------------------
 # SECURITY & AUTHENTICATION
 # ----------------------------------------------------------------------------
-matrix-auth:3.2.2
-role-strategy:727.vd344b_eec783d
+matrix-auth
 
 # ----------------------------------------------------------------------------
 # BUILD TOOLS & UTILITIES
 # ----------------------------------------------------------------------------
-timestamper:1.27
-build-timeout:1.33
-ws-cleanup:0.45
-gradle:2.13
-maven-plugin:3.23
+timestamper
+build-timeout
+ws-cleanup
+maven-plugin
 
 # ----------------------------------------------------------------------------
 # ARTIFACT MANAGEMENT
 # ----------------------------------------------------------------------------
-copyartifact:744.v2bdb_8e360a_9e
+copyartifact
 
 # ----------------------------------------------------------------------------
 # UI & REPORTING
 # ----------------------------------------------------------------------------
-dashboard-view:2.514.v4301b_54a_6893
-job-dsl:1.87
-ansicolor:1.0.4
-blueocean:1.27.14
+job-dsl
+ansicolor
 
 # ----------------------------------------------------------------------------
 # MISC UTILITIES
 # ----------------------------------------------------------------------------
-lockable-resources:1198.vf683f6a_3a_369
-parameterized-trigger:806.vf6fff3e28c3e
-rebuild:332.va_1ee476d8f6d
-monitoring:1.98.0
+lockable-resources

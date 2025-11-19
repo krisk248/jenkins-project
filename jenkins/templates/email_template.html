@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background-color: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; color: white; }
+        .content { padding: 30px; }
+        .summary-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        .summary-table td { padding: 12px; border: 1px solid #e0e0e0; }
+        .summary-table td:first-child { font-weight: bold; background-color: #f8f9fa; }
+        .risk-badge { padding: 8px 16px; border-radius: 4px; color: white; font-weight: bold; display: inline-block; }
+        .critical { background-color: #ff4444; }
+        .high { background-color: #ff8800; }
+        .medium { background-color: #ffbb00; }
+        .low { background-color: #00cc00; }
+        .stats { display: flex; justify-content: space-around; margin: 30px 0; }
+        .stat-card { text-align: center; padding: 15px; background: #f8f9fa; border-radius: 8px; flex: 1; margin: 0 10px; }
+        .stat-number { font-size: 28px; font-weight: bold; color: #2d3748; }
+        .stat-label { font-size: 12px; color: #718096; margin-top: 5px; }
+        .button { display: inline-block; padding: 12px 24px; background: #4299e1; color: white; text-decoration: none; border-radius: 5px; margin-top: 20px; }
+        .footer { background: #f8f9fa; padding: 20px; text-align: center; color: #718096; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 style="margin: 0; font-size: 28px;">🔒 Security Scan Complete</h1>
+            <p style="margin: 10px 0 0 0; opacity: 0.9;">${PROJECT_NAME}</p>
+        </div>
+
+        <div class="content">
+            <table class="summary-table">
+                <tr>
+                    <td width="30%">Build Number</td>
+                    <td>#${BUILD_NUMBER}</td>
+                </tr>
+                <tr>
+                    <td>Scan Date</td>
+                    <td>${SCAN_DATE}</td>
+                </tr>
+                <tr>
+                    <td>Risk Level</td>
+                    <td>
+                        <span class="risk-badge ${summary.risk_level.toLowerCase()}">
+                            ${summary.risk_level} (${summary.risk_score}/10)
+                        </span>
+                    </td>
+                </tr>
+                <tr>
+                    <td>Total Issues</td>
+                    <td><strong>${summary.total}</strong></td>
+                </tr>
+            </table>
+
+            <h3 style="color: #2d3748; margin-top: 30px;">Issue Breakdown</h3>
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="stat-number" style="color: #ff4444;">${summary.critical}</div>
+                    <div class="stat-label">CRITICAL</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" style="color: #ff8800;">${summary.high}</div>
+                    <div class="stat-label">HIGH</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" style="color: #ffbb00;">${summary.medium}</div>
+                    <div class="stat-label">MEDIUM</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" style="color: #4299e1;">${summary.low}</div>
+                    <div class="stat-label">LOW</div>
+                </div>
+            </div>
+
+            <div style="background: #f0f4f8; padding: 20px; border-radius: 8px; margin: 30px 0;">
+                <h4 style="margin-top: 0; color: #2d3748;">📎 Attachment</h4>
+                <p style="color: #4a5568; margin: 0;">
+                    A detailed PDF report is attached to this email containing:
+                    <ul style="color: #4a5568;">
+                        <li>Complete list of all security findings</li>
+                        <li>Vulnerability details and locations</li>
+                        <li>Remediation recommendations</li>
+                        <li>Tool-by-tool breakdown</li>
+                    </ul>
+                </p>
+            </div>
+
+            <center>
+                <a href="${BUILD_URL}" class="button">View in Jenkins</a>
+            </center>
+        </div>
+
+        <div class="footer">
+            <p>Automated Security Report - Jenkins Pipeline<br>
+            Generated: ${SCAN_DATE}</p>
+        </div>
+    </div>
+</body>
+</html>

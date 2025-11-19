@@ -1,0 +1,131 @@
+services:
+  # ============================================================================
+  # JENKINS - Lightweight CI/CD Orchestration Server
+  # ============================================================================
+  jenkins:
+    build:
+      context: ./jenkins
+      dockerfile: Dockerfile
+    container_name: jenkins-master
+    restart: unless-stopped
+    privileged: false  # Changed from true - not needed for lightweight orchestration
+    user: jenkins      # Run as jenkins user for security
+    ports:
+      - "7080:8080"      # Jenkins Web UI
+      - "50001:50001"    # Jenkins Agent Port
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - /tts/ttsbuild:/tts/ttsbuild:ro                    # Mount code folders (READ-ONLY)
+      - /tts/outputttsbuild:/tts/outputttsbuild           # Mount output folder (READ-WRITE)
+      - ./jenkins/casc_configs:/var/jenkins_home/casc_configs:ro  # JCasC configuration
+    environment:
+      - JENKINS_OPTS=--httpPort=8080
+      - JENKINS_SLAVE_AGENT_PORT=50001
+      - JAVA_OPTS=-Djenkins.install.runSetupWizard=false -Xmx2g -Xms512m
+      - CASC_JENKINS_CONFIG=/var/jenkins_home/casc_configs/jcasc.yaml
+
+      # JCasC Configuration from .env file
+      - JENKINS_ADMIN_USER=${JENKINS_ADMIN_USER}
+      - JENKINS_ADMIN_PASSWORD=${JENKINS_ADMIN_PASSWORD}
+      - JENKINS_ADMIN_EMAIL=${JENKINS_ADMIN_EMAIL}
+      - JENKINS_HOST=${JENKINS_HOST}
+
+      # Git/GitHub credentials
+      - GITHUB_USERNAME=${GITHUB_USERNAME}
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+
+      # Network share credentials
+      - NETWORK_SHARE_USER=${NETWORK_SHARE_USER}
+      - NETWORK_SHARE_PASS=${NETWORK_SHARE_PASS}
+
+      # SonarQube configuration
+      - SONARQUBE_TOKEN=${SONARQUBE_TOKEN}
+
+      # Email/SMTP configuration
+      - SMTP_SERVER=${SMTP_SERVER}
+      - SMTP_PORT=${SMTP_PORT}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASS=${SMTP_PASS}
+      - SMTP_REPLY_TO=${SMTP_REPLY_TO}
+      - DEVOPS_EMAIL=${DEVOPS_EMAIL}
+
+      # Shared library repository
+      - SHARED_LIBRARY_REPO=${SHARED_LIBRARY_REPO}
+
+      # Build agent configuration (for Phase 2)
+      - BUILD_AGENT_HOST=${BUILD_AGENT_HOST}
+    networks:
+      - devops-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/login"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+
+  # ============================================================================
+  # SONARQUBE - Code Quality & Security Analysis
+  # ============================================================================
+  sonarqube:
+    image: sonarqube:community
+    container_name: sonarqube
+    restart: unless-stopped
+    ports:
+      - "9000:9000"      # SonarQube Web UI
+    environment:
+      - SONAR_ES_BOOTSTRAP_CHECKS_DISABLE=true
+      - SONAR_JDBC_URL=jdbc:postgresql://sonarqube-db:5432/sonar
+      - SONAR_JDBC_USERNAME=sonar
+      - SONAR_JDBC_PASSWORD=sonar
+    volumes:
+      - /tts/ttsbuild:/tts/ttsbuild:ro                    # Mount code folders (READ-ONLY for scanning)
+      - sonarqube_data:/opt/sonarqube/data
+      - sonarqube_extensions:/opt/sonarqube/extensions
+      - sonarqube_logs:/opt/sonarqube/logs
+    networks:
+      - devops-net
+    depends_on:
+      - sonarqube-db
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/api/system/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+
+  # ============================================================================
+  # POSTGRESQL - SonarQube Database
+  # ============================================================================
+  sonarqube-db:
+    image: postgres:16
+    container_name: sonarqube-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=sonar
+      - POSTGRES_PASSWORD=sonar
+      - POSTGRES_DB=sonar
+    volumes:
+      - postgresql_data:/var/lib/postgresql/data
+    networks:
+      - devops-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sonar"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  jenkins_home:
+    driver: local
+  sonarqube_data:
+    driver: local
+  sonarqube_extensions:
+    driver: local
+  sonarqube_logs:
+    driver: local
+  postgresql_data:
+    driver: local
+
+networks:
+  devops-net:
+    driver: bridge

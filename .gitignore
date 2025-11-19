@@ -1,0 +1,46 @@
+# ============================================================================
+# TTS JENKINS - GIT IGNORE
+# ============================================================================
+
+# Environment variables (contains secrets!)
+.env
+
+# Docker volumes (local data)
+volumes/
+
+# Jenkins workspace
+workspace/
+
+# Log files
+*.log
+logs/
+
+# Backup files
+*.backup
+*.bak
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+.directory
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swn
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Build artifacts (in case they end up here)
+*.war
+*.jar
+target/
+dist/
+build/
+node_modules/

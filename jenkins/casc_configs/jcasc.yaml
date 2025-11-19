@@ -1,0 +1,209 @@
+# ============================================================================
+# JENKINS CONFIGURATION AS CODE (JCasC)
+# ============================================================================
+# This file configures Jenkins automatically on startup.
+# All sensitive values come from environment variables (defined in .env file).
+# No manual clicking through Jenkins UI required!
+# ============================================================================
+
+jenkins:
+  # --------------------------------------------------------------------------
+  # SYSTEM CONFIGURATION
+  # --------------------------------------------------------------------------
+  systemMessage: |
+    🚀 TTS Jenkins QA Build Server
+    Configured via Configuration as Code (JCasC)
+
+    Security Scanning: Semgrep, Trivy, TruffleHog
+    Code Quality: SonarQube Integration
+    Build Agents: Dedicated agents for Java/Angular builds
+
+    Contact DevOps team for support.
+
+  # Number of executors on master (should be 0 - master only orchestrates)
+  numExecutors: 0
+
+  # Disable CLI over remoting for security
+  disabledAdministrativeMonitors:
+    - "jenkins.diagnostics.ReverseProxySetupMonitor"
+
+  # --------------------------------------------------------------------------
+  # SECURITY REALM - Who can log in
+  # --------------------------------------------------------------------------
+  securityRealm:
+    local:
+      allowsSignup: false
+      users:
+        - id: "${JENKINS_ADMIN_USER}"
+          password: "${JENKINS_ADMIN_PASSWORD}"
+          name: "Jenkins Administrator"
+          description: "Jenkins admin user configured via JCasC"
+
+  # --------------------------------------------------------------------------
+  # AUTHORIZATION STRATEGY - What users can do
+  # --------------------------------------------------------------------------
+  authorizationStrategy:
+    globalMatrix:
+      permissions:
+        - "Overall/Administer:${JENKINS_ADMIN_USER}"
+        - "Overall/Read:authenticated"
+        - "Job/Build:authenticated"
+        - "Job/Cancel:authenticated"
+        - "Job/Read:authenticated"
+        - "Job/Workspace:authenticated"
+        - "Run/Replay:authenticated"
+        - "Run/Update:authenticated"
+
+  # --------------------------------------------------------------------------
+  # LOCATION CONFIGURATION
+  # --------------------------------------------------------------------------
+  location:
+    url: "http://${JENKINS_HOST}:7080/"
+    adminAddress: "${JENKINS_ADMIN_EMAIL}"
+
+  # --------------------------------------------------------------------------
+  # QUIET PERIOD
+  # --------------------------------------------------------------------------
+  quietPeriod: 5
+
+  # --------------------------------------------------------------------------
+  # SCM CHECKOUT RETRY COUNT
+  # --------------------------------------------------------------------------
+  scmCheckoutRetryCount: 3
+
+# ==============================================================================
+# CREDENTIALS
+# ==============================================================================
+credentials:
+  system:
+    domainCredentials:
+      - credentials:
+          # GitHub Personal Access Token for Git operations
+          - usernamePassword:
+              scope: GLOBAL
+              id: "github-pat"
+              username: "${GITHUB_USERNAME}"
+              password: "${GITHUB_TOKEN}"
+              description: "GitHub Personal Access Token for repository access"
+
+          # Network Share Credentials for deployment
+          - usernamePassword:
+              scope: GLOBAL
+              id: "network-share-credentials"
+              username: "${NETWORK_SHARE_USER}"
+              password: "${NETWORK_SHARE_PASS}"
+              description: "Credentials for \\\\192.168.1.136\\tts-builds"
+
+          # SonarQube Authentication Token
+          - string:
+              scope: GLOBAL
+              id: "sonarqube-token"
+              secret: "${SONARQUBE_TOKEN}"
+              description: "SonarQube authentication token"
+
+# ==============================================================================
+# SONARQUBE SERVERS
+# ==============================================================================
+unclassified:
+  # ----------------------------------------------------------------------------
+  # SONARQUBE CONFIGURATION
+  # ----------------------------------------------------------------------------
+  sonarGlobalConfiguration:
+    installations:
+      - name: "SonarQube"
+        serverUrl: "http://sonarqube:9000"
+        credentialsId: "sonarqube-token"
+        triggers:
+          skipScmCause: false
+          skipUpstreamCause: false
+
+  # ----------------------------------------------------------------------------
+  # EMAIL NOTIFICATION (STANDARD)
+  # ----------------------------------------------------------------------------
+  mailer:
+    smtpHost: "${SMTP_SERVER}"
+    smtpPort: "${SMTP_PORT}"
+    charset: "UTF-8"
+    authentication:
+      username: "${SMTP_USER}"
+      password: "${SMTP_PASS}"
+    useSsl: true
+    replyToAddress: "${SMTP_REPLY_TO}"
+
+  # ----------------------------------------------------------------------------
+  # EXTENDED EMAIL NOTIFICATION
+  # ----------------------------------------------------------------------------
+  extendedEmailPublisher:
+    smtpServer: "${SMTP_SERVER}"
+    smtpPort: "${SMTP_PORT}"
+    useSsl: true
+    charset: "UTF-8"
+    smtpAuthUsername: "${SMTP_USER}"
+    smtpAuthPassword: "${SMTP_PASS}"
+    defaultReplyTo: "${SMTP_REPLY_TO}"
+    defaultSubject: "$PROJECT_NAME - Build #$BUILD_NUMBER - $BUILD_STATUS"
+    defaultBody: |
+      Build Status: $BUILD_STATUS
+      Project: $PROJECT_NAME
+      Build Number: $BUILD_NUMBER
+      Build URL: $BUILD_URL
+
+      Check console output at: ${BUILD_URL}console
+    defaultContentType: "text/html"
+    defaultRecipients: "${DEVOPS_EMAIL}"
+    allowUnregisteredEnabled: false
+
+    # Default triggers
+    defaultTriggers:
+      - failure
+      - unstable
+      - success
+
+  # ----------------------------------------------------------------------------
+  # GLOBAL LIBRARIES (Shared Pipeline Library)
+  # ----------------------------------------------------------------------------
+  globalLibraries:
+    libraries:
+      - name: "jenkins-shared-library"
+        defaultVersion: "main"
+        implicit: true
+        allowVersionOverride: true
+        includeInChangesets: false
+        retriever:
+          modernSCM:
+            scm:
+              git:
+                remote: "${SHARED_LIBRARY_REPO}"
+                credentialsId: "github-pat"
+
+# ==============================================================================
+# TOOL CONFIGURATION
+# ==============================================================================
+tool:
+  # ----------------------------------------------------------------------------
+  # GIT
+  # ----------------------------------------------------------------------------
+  git:
+    installations:
+      - name: "Default"
+        home: "git"
+
+# ==============================================================================
+# BUILD AGENTS (Will be configured after Phase 2)
+# ==============================================================================
+# Agents will be added here after we set up the build agent on Ubuntu host
+# For now, this section is commented out
+#
+# Example agent configuration:
+# jenkins:
+#   nodes:
+#     - permanent:
+#         name: "build-agent-01"
+#         remoteFS: "/opt/jenkins-agent/workspace"
+#         labelString: "linux build-agent java node angular maven"
+#         launcher:
+#           ssh:
+#             host: "${BUILD_AGENT_HOST}"
+#             port: 22
+#             credentialsId: "build-agent-ssh-key"
+#             sshHostKeyVerificationStrategy: "nonVerifyingKeyVerificationStrategy"

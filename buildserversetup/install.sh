@@ -56,8 +56,9 @@ echo "==========================================================================
 echo "STEP 2: Installing Python Dependencies"
 echo "============================================================================"
 
-echo "Installing: requests, pyyaml, reportlab, Pillow..."
-pip3 install --user requests pyyaml reportlab Pillow
+echo "Installing system packages: python3-requests, python3-yaml, python3-reportlab, python3-pil..."
+sudo apt update -qq
+sudo apt install -y python3-requests python3-yaml python3-reportlab python3-pil
 
 echo -e "${GREEN}✅ Python dependencies installed${NC}"
 echo ""
@@ -74,7 +75,10 @@ if command -v semgrep &> /dev/null; then
     echo -e "${YELLOW}⚠️  Semgrep already installed: $SEMGREP_VERSION${NC}"
 else
     echo "Installing Semgrep..."
-    pip3 install --user semgrep
+    # Install Semgrep via pipx for isolated installation
+    sudo apt install -y pipx
+    pipx install semgrep
+    pipx ensurepath
 
     # Add to PATH if not already there
     if ! grep -q '$HOME/.local/bin' ~/.bashrc; then

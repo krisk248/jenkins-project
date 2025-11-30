@@ -1,0 +1,18 @@
+# TTS Security Scanning Module Dependencies
+# Install with: pipenv install -r requirements.txt
+
+# PDF Report Generation
+reportlab>=4.0.0
+Pillow>=10.0.0
+
+# Configuration
+PyYAML>=6.0.0
+
+# HTML Report Generation
+Jinja2>=3.1.0
+
+# Charts and Visualization
+matplotlib>=3.5.0
+
+# Process Management (stdlib, no install needed)
+# subprocess, logging, argparse, json, datetime - all stdlib

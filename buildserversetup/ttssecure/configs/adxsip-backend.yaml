@@ -1,0 +1,62 @@
+# ADXSIP Backend Security Scanning Configuration
+# Project: ADXSIP - Backend Component (Java/Maven)
+
+project:
+  name: "ADXSIP"
+  component: "backend"
+  type: "maven"
+
+source:
+  path: "/tts/ttsbuild/ADXSIP/tts-uae-adx-sip-serverside"
+  git_url: "https://github.com/ttsme/tts-uae-adx-sip-serverside.git"
+  default_branch: "main"
+
+metadata:
+  developer_team: "ADXSIP Development Team"
+  developer_contact: "adxsip-dev@ttsme.com"
+  devsecops_contact: "devsecops@ttsme.com"
+  qa_url: "http://192.168.1.136:9993/ADXSIP"
+
+output:
+  base_dir: "/tts/securityreports"
+  archive_dir: "/tts/archive/security"
+  retention_days: 30
+
+scanners:
+  semgrep:
+    enabled: true
+    config: "auto"
+    timeout: 600
+    max_findings: 100
+
+  trivy:
+    enabled: true
+    severity: "CRITICAL,HIGH,MEDIUM,LOW"
+    timeout: 600
+
+  trufflehog:
+    enabled: true
+    max_findings: 100
+
+  spotbugs:
+    enabled: true
+    timeout: 600
+
+  owasp_dependency:
+    enabled: true
+    timeout: 1200
+
+  eslint_security:
+    enabled: false              # Not needed for Java backend
+
+threshold:
+  max_critical: 0
+  max_high: 10
+  max_medium: 50
+  max_low: 100
+  fail_on_secrets: true
+
+notifications:
+  emails:
+    - "devops@ttsme.com"
+    - "adxsip-dev@ttsme.com"

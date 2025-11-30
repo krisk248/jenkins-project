@@ -1,0 +1,69 @@
+# TTS Security Scanning Configuration Template
+# Copy this file and customize for your project
+
+# Project identification
+project:
+  name: "PROJECT_NAME"          # e.g., ADXSIP, SIPBO
+  component: "backend"          # backend, frontend, or component name
+  type: "auto"                  # auto, maven, angular, gulp, nodejs
+
+# Source code location
+source:
+  path: "/tts/ttsbuild/PROJECT_NAME/path/to/source"
+  git_url: "https://github.com/org/repo.git"
+  default_branch: "main"
+
+# Project metadata (for reports)
+metadata:
+  developer_team: "Team Name"
+  developer_contact: "developer@ttsme.com"
+  devsecops_contact: "devsecops@ttsme.com"
+  qa_url: "http://192.168.1.136:PORT/PROJECT"
+
+# Output configuration
+output:
+  base_dir: "/tts/securityreports"
+  archive_dir: "/tts/archive/security"
+  retention_days: 30
+
+# Scanner configurations
+scanners:
+  semgrep:
+    enabled: true
+    config: "auto"              # auto, p/default, p/security-audit
+    timeout: 600                # 10 minutes
+    max_findings: 100
+
+  trivy:
+    enabled: true
+    severity: "CRITICAL,HIGH,MEDIUM,LOW"
+    timeout: 600
+
+  trufflehog:
+    enabled: true
+    max_findings: 100
+
+  spotbugs:
+    enabled: true               # Java projects only
+    timeout: 600
+
+  owasp_dependency:
+    enabled: true
+    timeout: 1200               # 20 minutes (first run is slow)
+
+  eslint_security:
+    enabled: true               # JS/TS projects only
+
+# Threshold configuration (fail build if exceeded)
+threshold:
+  max_critical: 0               # Any critical = fail
+  max_high: 10                  # More than 10 high = fail
+  max_medium: 50
+  max_low: 100
+  fail_on_secrets: true         # Any secrets = fail
+
+# Notification configuration
+notifications:
+  emails:
+    - "devops@ttsme.com"
+    - "developer@ttsme.com"

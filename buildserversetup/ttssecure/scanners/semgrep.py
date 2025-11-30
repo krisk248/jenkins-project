@@ -54,8 +54,23 @@ class SemgrepScanner(BaseScanner):
             "--json",
             f"--output={output_file}",
             "--no-git-ignore",  # Scan all files
-            str(source_path)
         ]
+
+        # Add exclude paths
+        for exclude in self.exclude_paths:
+            command.extend(["--exclude", exclude])
+
+        # Add include paths or full source
+        if self.include_paths:
+            for include in self.include_paths:
+                include_path = source_path / include
+                if include_path.exists():
+                    command.append(str(include_path))
+            # Fallback to source if no includes found
+            if len(command) == 6 + len(self.exclude_paths) * 2:
+                command.append(str(source_path))
+        else:
+            command.append(str(source_path))
 
         logger.info(f"[{self.name}] Running: {' '.join(command)}")
 

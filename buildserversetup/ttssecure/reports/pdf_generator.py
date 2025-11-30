@@ -5,9 +5,10 @@ Generates professional PDF security reports with charts and styling.
 """
 
 import io
+import base64
 from pathlib import Path
 from datetime import datetime
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Optional
 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter, A4
@@ -20,11 +21,14 @@ from reportlab.platypus import (
 from reportlab.graphics.shapes import Drawing
 from reportlab.graphics.charts.piecharts import Pie
 from reportlab.graphics.charts.barcharts import VerticalBarChart
+from PIL import Image as PILImage
 
 from reports.aggregator import AggregatedResults
 from scanners.base import Finding, Severity
 from utils.logger import get_logger
 
+# Easter egg - hidden message
+_EASTER_EGG = base64.b64encode(b"we grows together-by KG").decode()
 
 # Color definitions
 COLORS = {
@@ -37,6 +41,8 @@ COLORS = {
     "info": colors.HexColor("#3182ce"),
     "background": colors.HexColor("#f5f5f5"),
     "text": colors.HexColor("#333333"),
+    "light_bg": colors.HexColor("#f8f9fa"),
+    "border": colors.HexColor("#e0e0e0"),
 }
 
 
@@ -87,11 +93,11 @@ def generate_pdf_report(
         # Scanner results
         story.extend(_build_scanner_results(results, styles))
 
-        # Detailed findings (limited to prevent huge PDFs)
+        # Detailed findings with improved formatting
         story.extend(_build_findings_section(results, styles))
 
-        # Recommendations
-        story.extend(_build_recommendations(results, styles))
+        # Scanner Information (replaces Recommendations)
+        story.extend(_build_scanner_info(styles))
 
         # Build PDF
         doc.build(story)
@@ -102,6 +108,29 @@ def generate_pdf_report(
     except Exception as e:
         logger.error(f"Failed to generate PDF report: {e}")
         raise
+
+
+def _get_logo_with_aspect_ratio(logo_path: Path, max_width: float = 2*inch, max_height: float = 1*inch) -> Optional[Image]:
+    """Load logo preserving aspect ratio."""
+    try:
+        if not logo_path or not Path(logo_path).exists():
+            return None
+
+        # Open with PIL to get dimensions
+        with PILImage.open(logo_path) as pil_img:
+            orig_width, orig_height = pil_img.size
+
+        # Calculate scaling to fit within bounds while preserving aspect ratio
+        width_ratio = max_width / orig_width
+        height_ratio = max_height / orig_height
+        scale = min(width_ratio, height_ratio)
+
+        new_width = orig_width * scale
+        new_height = orig_height * scale
+
+        return Image(str(logo_path), width=new_width, height=new_height)
+    except Exception:
+        return None
 
 
 def _get_styles() -> Dict[str, ParagraphStyle]:
@@ -132,6 +161,14 @@ def _get_styles() -> Dict[str, ParagraphStyle]:
             spaceBefore=15,
             spaceAfter=8,
         ),
+        "heading3": ParagraphStyle(
+            "CustomHeading3",
+            parent=base_styles["Heading3"],
+            fontSize=11,
+            textColor=COLORS["primary"],
+            spaceBefore=10,
+            spaceAfter=5,
+        ),
         "normal": ParagraphStyle(
             "CustomNormal",
             parent=base_styles["Normal"],
@@ -143,6 +180,14 @@ def _get_styles() -> Dict[str, ParagraphStyle]:
             parent=base_styles["Normal"],
             fontSize=8,
             textColor=colors.grey,
+        ),
+        "code": ParagraphStyle(
+            "Code",
+            parent=base_styles["Normal"],
+            fontSize=8,
+            fontName="Courier",
+            textColor=COLORS["text"],
+            backColor=COLORS["light_bg"],
         ),
         "critical": ParagraphStyle(
             "Critical",
@@ -159,6 +204,27 @@ def _get_styles() -> Dict[str, ParagraphStyle]:
     }
 
 
+def _simplify_path(full_path: str, base_folder: str = "") -> str:
+    """Simplify file path for display."""
+    if not full_path:
+        return ""
+
+    # Try to extract from src/ or main folder
+    path_parts = full_path.replace("\\", "/").split("/")
+
+    # Find src or main folder markers
+    markers = ["src", "main", "java", "resources", "test"]
+    for i, part in enumerate(path_parts):
+        if part in markers:
+            return "/".join(path_parts[i:])
+
+    # If path is very long, just show last 3 parts
+    if len(path_parts) > 4:
+        return ".../" + "/".join(path_parts[-3:])
+
+    return full_path
+
+
 def _build_cover_page(
     results: AggregatedResults,
     styles: Dict,
@@ -168,13 +234,10 @@ def _build_cover_page(
     story = []
     stats = results.statistics
 
-    # Logo
-    if logo_path and Path(logo_path).exists():
-        try:
-            img = Image(str(logo_path), width=2*inch, height=1*inch)
-            story.append(img)
-        except Exception:
-            pass
+    # Logo with original aspect ratio
+    logo = _get_logo_with_aspect_ratio(logo_path, max_width=2.5*inch, max_height=1.2*inch)
+    if logo:
+        story.append(logo)
 
     story.append(Spacer(1, 0.5*inch))
 
@@ -362,7 +425,7 @@ def _build_scanner_results(results: AggregatedResults, styles: Dict) -> List:
 
 
 def _build_findings_section(results: AggregatedResults, styles: Dict) -> List:
-    """Build detailed findings section."""
+    """Build detailed findings section with improved table formatting."""
     story = []
 
     story.append(PageBreak())
@@ -384,65 +447,173 @@ def _build_findings_section(results: AggregatedResults, styles: Dict) -> List:
             if len(findings_by_severity[finding.severity]) < max_per_severity:
                 findings_by_severity[finding.severity].append(finding)
 
+    severity_colors = {
+        Severity.CRITICAL: COLORS["critical"],
+        Severity.HIGH: COLORS["high"],
+        Severity.MEDIUM: COLORS["medium"],
+        Severity.LOW: COLORS["low"],
+    }
+
     for severity, findings in findings_by_severity.items():
         if not findings:
             continue
 
         story.append(Paragraph(
-            f"{severity.value} Findings ({len(findings)})",
+            f"<font color='{severity_colors[severity].hexval()}'><b>{severity.value}</b></font> Findings ({len(findings)})",
             styles["heading2"]
         ))
 
+        # Create table for findings
         for finding in findings:
-            # Finding header
-            story.append(Paragraph(
-                f"<b>{finding.rule_id}</b>: {finding.title[:70]}",
-                styles["normal"]
-            ))
+            # Simplify path
+            simple_path = _simplify_path(finding.file_path)
 
-            # Location
-            location = f"File: {finding.file_path}"
-            if finding.line_number:
-                location += f" | Line: {finding.line_number}"
+            # Finding table
+            finding_data = [
+                [Paragraph(f"<b>{finding.rule_id}</b>", styles["normal"]),
+                 Paragraph(f"<font color='{severity_colors[severity].hexval()}'><b>{severity.value}</b></font>", styles["normal"])],
+                [Paragraph(f"<b>File:</b> {simple_path}", styles["small"]),
+                 Paragraph(f"<b>Line:</b> {finding.line_number}" if finding.line_number else "", styles["small"])],
+            ]
+
+            # Add CWE if present
             if finding.cwe_id:
-                location += f" | {finding.cwe_id}"
-            story.append(Paragraph(location, styles["small"]))
+                finding_data.append([
+                    Paragraph(f"<b>CWE:</b> {finding.cwe_id}", styles["small"]),
+                    ""
+                ])
 
-            # Description
-            if finding.description:
-                story.append(Paragraph(
-                    finding.description[:200] + "..." if len(finding.description) > 200 else finding.description,
-                    styles["normal"]
-                ))
+            # Add description
+            desc = finding.description[:200] + "..." if len(finding.description) > 200 else finding.description
+            finding_data.append([
+                Paragraph(desc, styles["normal"]),
+                ""
+            ])
 
+            finding_table = Table(finding_data, colWidths=[4.5*inch, 1.5*inch])
+            finding_table.setStyle(TableStyle([
+                ("BACKGROUND", (0, 0), (-1, 0), COLORS["light_bg"]),
+                ("SPAN", (0, -1), (-1, -1)),  # Span description across columns
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 8),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+                ("TOPPADDING", (0, 0), (-1, -1), 6),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+                ("BOX", (0, 0), (-1, -1), 1, severity_colors[severity]),
+                ("LINEBELOW", (0, 0), (-1, 0), 1, COLORS["border"]),
+            ]))
+
+            story.append(finding_table)
             story.append(Spacer(1, 0.1*inch))
 
     return story
 
 
-def _build_recommendations(results: AggregatedResults, styles: Dict) -> List:
-    """Build recommendations section."""
+def _build_scanner_info(styles: Dict) -> List:
+    """Build scanner information page (replaces recommendations)."""
     story = []
 
     story.append(PageBreak())
-    story.append(Paragraph("Recommendations", styles["heading1"]))
+    story.append(Paragraph("About the Security Scanners", styles["heading1"]))
 
-    recommendations = [
-        "Address all CRITICAL and HIGH severity findings immediately.",
-        "Review and fix MEDIUM severity findings within the next sprint.",
-        "Document any accepted risks for LOW severity findings.",
-        "Implement security scanning in CI/CD pipeline for continuous monitoring.",
-        "Conduct regular security training for development team.",
-        "Keep all dependencies updated to their latest secure versions.",
+    scanners_info = [
+        {
+            "name": "Semgrep",
+            "type": "SAST (Static Application Security Testing)",
+            "description": "Semgrep is a fast, open-source static analysis tool that finds bugs and enforces code standards. It uses pattern-based rules to identify security vulnerabilities, code smells, and policy violations in source code.",
+            "detects": "SQL Injection, XSS, Command Injection, Path Traversal, Insecure Crypto, and custom patterns"
+        },
+        {
+            "name": "Trivy",
+            "type": "SCA (Software Composition Analysis)",
+            "description": "Trivy is a comprehensive vulnerability scanner for containers, filesystems, and Git repositories. It detects vulnerabilities in OS packages, application dependencies, and Infrastructure as Code misconfigurations.",
+            "detects": "CVEs in dependencies, container vulnerabilities, secrets, misconfigurations"
+        },
+        {
+            "name": "TruffleHog",
+            "type": "Secret Scanner",
+            "description": "TruffleHog searches through git repositories and filesystems for high-entropy strings and patterns that indicate secrets like API keys, passwords, and tokens that should not be in source code.",
+            "detects": "API keys, passwords, tokens, private keys, credentials"
+        },
+        {
+            "name": "SpotBugs + FindSecBugs",
+            "type": "Java Bytecode Analysis",
+            "description": "SpotBugs analyzes Java bytecode to find bugs. With the FindSecBugs plugin, it specifically targets security vulnerabilities in Java applications by examining compiled class files.",
+            "detects": "Java security bugs, injection flaws, cryptographic issues, insecure practices"
+        },
+        {
+            "name": "OWASP Dependency-Check",
+            "type": "Dependency Vulnerability Scanner",
+            "description": "OWASP Dependency-Check identifies project dependencies and checks if there are any known, publicly disclosed vulnerabilities (CVEs) using the National Vulnerability Database.",
+            "detects": "Known CVEs in project dependencies (Java, .NET, JavaScript, Python, etc.)"
+        },
     ]
 
-    # Add specific recommendations based on findings
-    if results.statistics.critical_count > 0:
-        recommendations.insert(0, f"URGENT: {results.statistics.critical_count} critical vulnerabilities require immediate attention.")
+    for scanner in scanners_info:
+        story.append(Paragraph(f"<b>{scanner['name']}</b> - {scanner['type']}", styles["heading3"]))
+        story.append(Paragraph(scanner['description'], styles["normal"]))
+        story.append(Paragraph(f"<b>Detects:</b> {scanner['detects']}", styles["small"]))
+        story.append(Spacer(1, 0.15*inch))
 
-    for i, rec in enumerate(recommendations, 1):
-        story.append(Paragraph(f"{i}. {rec}", styles["normal"]))
-        story.append(Spacer(1, 0.1*inch))
+    story.append(Spacer(1, 0.2*inch))
+
+    # Risk Score Calculation
+    story.append(Paragraph("Risk Score Calculation", styles["heading2"]))
+    story.append(Paragraph(
+        "The risk score is calculated using the following formula:",
+        styles["normal"]
+    ))
+    story.append(Spacer(1, 0.1*inch))
+
+    formula_table = Table([
+        ["Risk Score = (Critical x 4 + High x 2 + Medium x 1) / 10"]
+    ], colWidths=[5*inch])
+    formula_table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, -1), COLORS["light_bg"]),
+        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+        ("FONTNAME", (0, 0), (-1, -1), "Courier"),
+        ("FONTSIZE", (0, 0), (-1, -1), 10),
+        ("PADDING", (0, 0), (-1, -1), 12),
+        ("BOX", (0, 0), (-1, -1), 1, COLORS["border"]),
+    ]))
+    story.append(formula_table)
+    story.append(Spacer(1, 0.15*inch))
+
+    # Risk levels
+    risk_levels = [
+        ["Risk Level", "Score Range", "Action Required"],
+        ["CRITICAL", ">= 7.0", "Immediate remediation required"],
+        ["HIGH", "5.0 - 6.9", "Address within 24-48 hours"],
+        ["MEDIUM", "3.0 - 4.9", "Plan remediation within sprint"],
+        ["LOW", "< 3.0", "Monitor and track"],
+    ]
+    risk_table = Table(risk_levels, colWidths=[1.2*inch, 1.2*inch, 2.5*inch])
+    risk_table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), COLORS["primary"]),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("FONTSIZE", (0, 0), (-1, -1), 9),
+        ("GRID", (0, 0), (-1, -1), 1, COLORS["border"]),
+        ("TEXTCOLOR", (0, 1), (0, 1), COLORS["critical"]),
+        ("TEXTCOLOR", (0, 2), (0, 2), COLORS["high"]),
+        ("TEXTCOLOR", (0, 3), (0, 3), COLORS["medium"]),
+        ("TEXTCOLOR", (0, 4), (0, 4), COLORS["low"]),
+    ]))
+    story.append(risk_table)
+
+    # Hidden easter egg in metadata (not visible but in PDF)
+    story.append(Spacer(1, 0.3*inch))
+    story.append(Paragraph(
+        f"<font color='white' size='1'><!-- {_EASTER_EGG} --></font>",
+        styles["small"]
+    ))
+
+    # Footer
+    story.append(Spacer(1, 0.3*inch))
+    story.append(Paragraph(
+        "<i>Generated by TTS Security Scanning Module (ttssecure) v1.0.0</i>",
+        styles["small"]
+    ))
 
     return story
 

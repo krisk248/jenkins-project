@@ -55,8 +55,24 @@ class TrivyScanner(BaseScanner):
             "--output", str(output_file),
             "--severity", self.severity_filter_str,
             "--scanners", "vuln,secret,misconfig",
-            str(source_path)
         ]
+
+        # Add exclude paths (Trivy uses --skip-dirs)
+        for exclude in self.exclude_paths:
+            command.extend(["--skip-dirs", exclude])
+
+        # Add target path (include paths or full source)
+        if self.include_paths:
+            # Trivy doesn't support multiple targets well, use first include
+            for include in self.include_paths:
+                include_path = source_path / include
+                if include_path.exists() and include_path.is_dir():
+                    command.append(str(include_path))
+                    break
+            else:
+                command.append(str(source_path))
+        else:
+            command.append(str(source_path))
 
         logger.info(f"[{self.name}] Running: {' '.join(command)}")
 

@@ -54,8 +54,20 @@ class TruffleHogScanner(BaseScanner):
             "filesystem",
             "--json",
             "--no-verification",  # Skip verification for speed
-            str(source_path)
         ]
+
+        # Add exclude paths (TruffleHog uses --exclude-paths with file)
+        # For now, we'll scan specific paths if include_paths is set
+        if self.include_paths:
+            for include in self.include_paths:
+                include_path = source_path / include
+                if include_path.exists():
+                    command.append(str(include_path))
+            # Fallback if no valid paths
+            if len(command) == 4:
+                command.append(str(source_path))
+        else:
+            command.append(str(source_path))
 
         logger.info(f"[{self.name}] Running: {' '.join(command)}")
 

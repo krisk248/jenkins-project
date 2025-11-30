@@ -184,6 +184,8 @@ def run_scanners(config: Config, output_dir: Path) -> List[ScanResult]:
             config=scanner_config.config if scanner_config else "auto",
             severity_filter=scanner_config.severity if scanner_config else "CRITICAL,HIGH,MEDIUM,LOW",
             max_findings=scanner_config.max_findings if scanner_config else 100,
+            include_paths=config.source.include_paths,
+            exclude_paths=config.source.exclude_paths,
         )
 
         # Check if installed
@@ -361,7 +363,7 @@ def main() -> int:
         # HTML Report
         html_path = output_dir / f"{report_id}.html"
         try:
-            generate_html_report(aggregated, html_path)
+            generate_html_report(aggregated, html_path, logo_path)
             logger.info(LogMessages.REPORT_COMPLETE.format(path=html_path))
         except Exception as e:
             logger.error(LogMessages.REPORT_FAIL.format(format="HTML", error=str(e)))

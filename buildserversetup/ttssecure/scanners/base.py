@@ -161,7 +161,9 @@ class BaseScanner(ABC):
         timeout: int = None,
         config: str = "auto",
         severity_filter: str = "CRITICAL,HIGH,MEDIUM,LOW",
-        max_findings: int = 100
+        max_findings: int = 100,
+        include_paths: List[str] = None,
+        exclude_paths: List[str] = None
     ):
         """
         Initialize scanner.
@@ -171,11 +173,15 @@ class BaseScanner(ABC):
             config: Scanner-specific configuration
             severity_filter: Comma-separated severity levels to include
             max_findings: Maximum findings to return
+            include_paths: Only scan these paths (relative to source)
+            exclude_paths: Skip these paths
         """
         self.timeout = timeout or self.default_timeout
         self.config = config
         self.severity_filter = severity_filter.split(",")
         self.max_findings = max_findings
+        self.include_paths = include_paths or []
+        self.exclude_paths = exclude_paths or []
 
     @abstractmethod
     def scan(self, source_path: Path, output_dir: Path) -> ScanResult:

@@ -59,6 +59,8 @@ class SourceConfig:
     path: str = ""
     git_url: str = ""
     default_branch: str = "main"
+    include_paths: List[str] = field(default_factory=list)  # Only scan these (e.g., ["src", "pom.xml"])
+    exclude_paths: List[str] = field(default_factory=list)  # Skip these (e.g., ["otherFiles", "test"])
 
 
 @dataclass
@@ -181,6 +183,8 @@ def _parse_config(data: Dict[str, Any]) -> Config:
             path=_expand_path(src.get("path", "")),
             git_url=src.get("git_url", ""),
             default_branch=src.get("default_branch", "main"),
+            include_paths=src.get("include_paths", []),
+            exclude_paths=src.get("exclude_paths", []),
         )
 
     # Parse metadata section

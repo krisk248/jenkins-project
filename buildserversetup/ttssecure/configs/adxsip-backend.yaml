@@ -10,6 +10,14 @@ source:
   path: "/tts/ttsbuild/ADXSIP/tts-uae-adx-sip-serverside"
   git_url: "https://github.com/ttsme/tts-uae-adx-sip-serverside.git"
   default_branch: "main"
+  include_paths:                    # Only scan these paths (relative to source path)
+    - "src"
+    - "pom.xml"
+  exclude_paths:                    # Skip these folders
+    - "otherFiles"
+    - "test"
+    - "docs"
+    - ".git"
 
 metadata:
   developer_team: "ADXSIP Development Team"

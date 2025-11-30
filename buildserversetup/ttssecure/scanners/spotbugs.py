@@ -13,9 +13,9 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import List, Optional
 
-from .base import BaseScanner, ScanResult, Finding, Severity
-from ..utils.process import run_with_retry, check_tool_installed
-from ..utils.logger import get_logger
+from scanners.base import BaseScanner, ScanResult, Finding, Severity
+from utils.process import run_with_retry, check_tool_installed
+from utils.logger import get_logger
 
 
 class SpotBugsScanner(BaseScanner):

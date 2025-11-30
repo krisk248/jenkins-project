@@ -21,9 +21,9 @@ from reportlab.graphics.shapes import Drawing
 from reportlab.graphics.charts.piecharts import Pie
 from reportlab.graphics.charts.barcharts import VerticalBarChart
 
-from .aggregator import AggregatedResults
-from ..scanners.base import Finding, Severity
-from ..utils.logger import get_logger
+from reports.aggregator import AggregatedResults
+from scanners.base import Finding, Severity
+from utils.logger import get_logger
 
 
 # Color definitions

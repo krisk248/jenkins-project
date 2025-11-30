@@ -7,8 +7,8 @@ Generates machine-readable JSON summary of scan results.
 import json
 from pathlib import Path
 
-from .aggregator import AggregatedResults
-from ..utils.logger import get_logger
+from reports.aggregator import AggregatedResults
+from utils.logger import get_logger
 
 
 def generate_json_report(

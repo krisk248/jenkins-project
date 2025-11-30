@@ -8,9 +8,9 @@ from pathlib import Path
 from datetime import datetime
 from typing import Dict, List
 
-from .aggregator import AggregatedResults
-from ..scanners.base import Finding, Severity
-from ..utils.logger import get_logger
+from reports.aggregator import AggregatedResults
+from scanners.base import Finding, Severity
+from utils.logger import get_logger
 
 
 def generate_html_report(

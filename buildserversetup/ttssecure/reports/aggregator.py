@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import List, Dict, Any
 
-from ..scanners.base import ScanResult, Finding, Severity
+from scanners.base import ScanResult, Finding, Severity
 
 
 @dataclass

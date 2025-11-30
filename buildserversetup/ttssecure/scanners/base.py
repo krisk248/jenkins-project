@@ -206,12 +206,12 @@ class BaseScanner(ABC):
 
     def is_installed(self) -> bool:
         """Check if the scanner tool is installed."""
-        from ..utils.process import check_tool_installed
+        from utils.process import check_tool_installed
         return check_tool_installed(self.tool_command)
 
     def get_version(self) -> Optional[str]:
         """Get scanner tool version."""
-        from ..utils.process import get_tool_version
+        from utils.process import get_tool_version
         return get_tool_version(self.tool_command)
 
     def filter_findings(self, findings: List[Finding]) -> List[Finding]:

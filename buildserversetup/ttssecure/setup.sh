@@ -3,7 +3,15 @@
 # TTS Security Scanning Module - Setup Script
 # This script sets up the environment and validates the installation
 #
-# Usage: ./setup.sh [--install-only | --test-only | --full]
+# Usage: ./setup.sh [OPTIONS]
+#
+# Options:
+#   --full              Full setup (default): Python deps + scanners + test
+#   --install-only      Install Python dependencies only (skip test)
+#   --test-only         Run dry-run test only
+#   --scanners          Install security scanners only (SpotBugs, Dependency-Check)
+#   --check-scanners    Check which scanners are installed
+#   --help              Show this help message
 #
 # Exit Codes:
 #   0 - Success
@@ -354,6 +362,253 @@ check_directories() {
     fi
 }
 
+# ============================================================
+# SECURITY SCANNER INSTALLATION FUNCTIONS
+# ============================================================
+
+# SpotBugs version
+SPOTBUGS_VERSION="4.9.8"
+FINDSECBUGS_VERSION="1.14.0"
+DEPENDENCY_CHECK_VERSION="12.1.0"
+
+# Install SpotBugs (Java static analysis)
+install_spotbugs() {
+    log "Checking SpotBugs installation..."
+
+    if command -v spotbugs &> /dev/null; then
+        INSTALLED_VERSION=$(spotbugs -version 2>/dev/null || echo "unknown")
+        log_success "SpotBugs already installed: ${INSTALLED_VERSION}"
+        return 0
+    fi
+
+    log "Installing SpotBugs ${SPOTBUGS_VERSION}..."
+
+    # Check if Java is installed (required for SpotBugs)
+    if ! command -v java &> /dev/null; then
+        log_error "Java is required for SpotBugs. Please install JDK 11+ first."
+        log_warn "  Ubuntu/Debian: sudo apt install default-jdk"
+        log_warn "  CentOS/RHEL: sudo yum install java-11-openjdk"
+        return 1
+    fi
+
+    # Download SpotBugs
+    cd /tmp
+    if [ -f "spotbugs-${SPOTBUGS_VERSION}.tgz" ]; then
+        rm -f "spotbugs-${SPOTBUGS_VERSION}.tgz"
+    fi
+
+    log "Downloading SpotBugs..."
+    if ! wget -q "https://github.com/spotbugs/spotbugs/releases/download/${SPOTBUGS_VERSION}/spotbugs-${SPOTBUGS_VERSION}.tgz"; then
+        log_error "Failed to download SpotBugs"
+        return 1
+    fi
+
+    # Extract to /opt
+    log "Extracting SpotBugs to /opt..."
+    sudo tar -xzf "spotbugs-${SPOTBUGS_VERSION}.tgz" -C /opt
+
+    # Create symlink
+    sudo rm -f /usr/local/bin/spotbugs
+    sudo ln -s "/opt/spotbugs-${SPOTBUGS_VERSION}/bin/spotbugs" /usr/local/bin/spotbugs
+    sudo chmod +x "/opt/spotbugs-${SPOTBUGS_VERSION}/bin/spotbugs"
+
+    # Cleanup
+    rm -f "spotbugs-${SPOTBUGS_VERSION}.tgz"
+
+    # Verify
+    if command -v spotbugs &> /dev/null; then
+        log_success "SpotBugs ${SPOTBUGS_VERSION} installed successfully"
+        return 0
+    else
+        log_error "SpotBugs installation failed"
+        return 1
+    fi
+}
+
+# Install FindSecBugs plugin (security rules for SpotBugs)
+install_findsecbugs() {
+    log "Checking FindSecBugs plugin..."
+
+    PLUGIN_DIR="/opt/spotbugs-plugins"
+    PLUGIN_FILE="${PLUGIN_DIR}/findsecbugs-plugin-${FINDSECBUGS_VERSION}.jar"
+
+    if [ -f "$PLUGIN_FILE" ]; then
+        log_success "FindSecBugs plugin already installed: ${FINDSECBUGS_VERSION}"
+        return 0
+    fi
+
+    log "Installing FindSecBugs plugin ${FINDSECBUGS_VERSION}..."
+
+    # Create plugins directory
+    sudo mkdir -p "$PLUGIN_DIR"
+
+    # Download from Maven Central
+    log "Downloading FindSecBugs plugin..."
+    if ! sudo wget -q -O "$PLUGIN_FILE" \
+        "https://search.maven.org/remotecontent?filepath=com/h3xstream/findsecbugs/findsecbugs-plugin/${FINDSECBUGS_VERSION}/findsecbugs-plugin-${FINDSECBUGS_VERSION}.jar"; then
+        log_error "Failed to download FindSecBugs plugin"
+        return 1
+    fi
+
+    # Verify file was downloaded
+    if [ -f "$PLUGIN_FILE" ] && [ -s "$PLUGIN_FILE" ]; then
+        log_success "FindSecBugs plugin ${FINDSECBUGS_VERSION} installed successfully"
+        return 0
+    else
+        log_error "FindSecBugs plugin installation failed"
+        sudo rm -f "$PLUGIN_FILE"
+        return 1
+    fi
+}
+
+# Install OWASP Dependency-Check (SCA tool)
+install_dependency_check() {
+    log "Checking OWASP Dependency-Check installation..."
+
+    if command -v dependency-check &> /dev/null; then
+        INSTALLED_VERSION=$(dependency-check --version 2>/dev/null | head -1 || echo "unknown")
+        log_success "Dependency-Check already installed: ${INSTALLED_VERSION}"
+        return 0
+    fi
+
+    log "Installing OWASP Dependency-Check ${DEPENDENCY_CHECK_VERSION}..."
+
+    # Check if Java is installed (required)
+    if ! command -v java &> /dev/null; then
+        log_error "Java is required for Dependency-Check. Please install JDK 11+ first."
+        return 1
+    fi
+
+    # Download Dependency-Check
+    cd /tmp
+    ZIP_FILE="dependency-check-${DEPENDENCY_CHECK_VERSION}-release.zip"
+
+    if [ -f "$ZIP_FILE" ]; then
+        rm -f "$ZIP_FILE"
+    fi
+
+    log "Downloading Dependency-Check..."
+    if ! wget -q "https://github.com/jeremylong/DependencyCheck/releases/download/v${DEPENDENCY_CHECK_VERSION}/${ZIP_FILE}"; then
+        log_error "Failed to download Dependency-Check"
+        return 1
+    fi
+
+    # Remove old installation if exists
+    if [ -d "/opt/dependency-check" ]; then
+        log "Removing old Dependency-Check installation..."
+        sudo rm -rf /opt/dependency-check
+    fi
+
+    # Extract to /opt
+    log "Extracting Dependency-Check to /opt..."
+    sudo unzip -q "$ZIP_FILE" -d /opt
+
+    # Create symlink
+    sudo rm -f /usr/local/bin/dependency-check
+    sudo ln -s /opt/dependency-check/bin/dependency-check.sh /usr/local/bin/dependency-check
+    sudo chmod +x /opt/dependency-check/bin/dependency-check.sh
+
+    # Cleanup
+    rm -f "$ZIP_FILE"
+
+    # Verify
+    if command -v dependency-check &> /dev/null; then
+        log_success "Dependency-Check ${DEPENDENCY_CHECK_VERSION} installed successfully"
+        log_warn "NOTE: First scan will download NVD database (may take 10-30 minutes)"
+        return 0
+    else
+        log_error "Dependency-Check installation failed"
+        return 1
+    fi
+}
+
+# Install all security scanners
+install_security_scanners() {
+    log "Installing security scanners..."
+    echo ""
+
+    # Track failures
+    SCANNER_FAILURES=0
+
+    # Install SpotBugs
+    if ! install_spotbugs; then
+        ((SCANNER_FAILURES++))
+    fi
+    echo ""
+
+    # Install FindSecBugs plugin
+    if ! install_findsecbugs; then
+        ((SCANNER_FAILURES++))
+    fi
+    echo ""
+
+    # Install OWASP Dependency-Check
+    if ! install_dependency_check; then
+        ((SCANNER_FAILURES++))
+    fi
+    echo ""
+
+    # Summary
+    if [ $SCANNER_FAILURES -eq 0 ]; then
+        log_success "All security scanners installed successfully"
+    else
+        log_warn "${SCANNER_FAILURES} scanner(s) failed to install"
+        log_warn "You can continue, but some scanners will be skipped during scans"
+    fi
+
+    return 0
+}
+
+# Check existing scanner installations
+check_scanners() {
+    log "Checking security scanner installations..."
+    echo ""
+
+    # Semgrep
+    if command -v semgrep &> /dev/null; then
+        log_success "Semgrep: $(semgrep --version 2>/dev/null | head -1)"
+    else
+        log_warn "Semgrep: NOT INSTALLED (pip install semgrep)"
+    fi
+
+    # Trivy
+    if command -v trivy &> /dev/null; then
+        log_success "Trivy: $(trivy --version 2>/dev/null | head -1)"
+    else
+        log_warn "Trivy: NOT INSTALLED"
+    fi
+
+    # TruffleHog
+    if command -v trufflehog &> /dev/null; then
+        log_success "TruffleHog: $(trufflehog --version 2>/dev/null | head -1)"
+    else
+        log_warn "TruffleHog: NOT INSTALLED"
+    fi
+
+    # SpotBugs
+    if command -v spotbugs &> /dev/null; then
+        log_success "SpotBugs: $(spotbugs -version 2>/dev/null)"
+    else
+        log_warn "SpotBugs: NOT INSTALLED"
+    fi
+
+    # FindSecBugs plugin
+    if [ -f "/opt/spotbugs-plugins/findsecbugs-plugin-${FINDSECBUGS_VERSION}.jar" ]; then
+        log_success "FindSecBugs: ${FINDSECBUGS_VERSION}"
+    else
+        log_warn "FindSecBugs: NOT INSTALLED"
+    fi
+
+    # OWASP Dependency-Check
+    if command -v dependency-check &> /dev/null; then
+        log_success "Dependency-Check: $(dependency-check --version 2>/dev/null | head -1)"
+    else
+        log_warn "Dependency-Check: NOT INSTALLED"
+    fi
+
+    echo ""
+}
+
 # Print summary
 print_summary() {
     echo ""
@@ -375,17 +630,60 @@ print_summary() {
     echo "========================================"
 }
 
+# Show help message
+show_help() {
+    echo "TTS Security Scanning Module - Setup Script"
+    echo ""
+    echo "Usage: ./setup.sh [OPTIONS]"
+    echo ""
+    echo "Options:"
+    echo "  --full              Full setup (default): Python deps + scanners + test"
+    echo "  --install-only      Install Python dependencies only (skip test)"
+    echo "  --test-only         Run dry-run test only"
+    echo "  --scanners          Install security scanners only (SpotBugs, Dependency-Check)"
+    echo "  --check-scanners    Check which scanners are installed"
+    echo "  --help              Show this help message"
+    echo ""
+    echo "Examples:"
+    echo "  ./setup.sh                    # Full setup"
+    echo "  ./setup.sh --scanners         # Install SpotBugs + OWASP Dependency-Check"
+    echo "  ./setup.sh --check-scanners   # Show scanner status"
+    echo ""
+}
+
 # Main execution
 main() {
+    MODE="${1:---full}"
+
+    # Handle help
+    if [ "$MODE" == "--help" ] || [ "$MODE" == "-h" ]; then
+        show_help
+        exit 0
+    fi
+
     echo "========================================"
     echo "TTS Security Scanning Module - Setup"
     echo "========================================"
     echo ""
 
-    MODE="${1:---full}"
-
     # Remove old error log
     rm -f "$LOG_FILE"
+
+    # Handle scanner-only modes first
+    if [ "$MODE" == "--check-scanners" ]; then
+        check_scanners
+        exit 0
+    fi
+
+    if [ "$MODE" == "--scanners" ]; then
+        log "Installing security scanners..."
+        echo ""
+        install_security_scanners
+        echo ""
+        log "Scanner installation complete. Checking status..."
+        check_scanners
+        exit 0
+    fi
 
     # Step 1: Check OS
     if ! check_os; then
@@ -417,13 +715,19 @@ main() {
     # Step 5: Check directories
     check_directories
 
+    # Step 6: Install security scanners (for full mode)
+    if [ "$MODE" == "--full" ]; then
+        echo ""
+        install_security_scanners
+    fi
+
     if [ "$MODE" == "--install-only" ]; then
         log_success "Installation complete (skipping test)"
         print_summary
         exit 0
     fi
 
-    # Step 6: Run dry test
+    # Step 7: Run dry test
     if ! run_dry_test; then
         exit 5
     fi

@@ -50,8 +50,7 @@ scanners:
     enabled: false              # Not needed for Angular frontend
 
   owasp_dependency:
-    enabled: true
-    timeout: 1200
+    enabled: false              # Disabled for frontend - takes too long and Trivy covers dependencies
 
   eslint_security:
     enabled: true               # Enable for JS/TS

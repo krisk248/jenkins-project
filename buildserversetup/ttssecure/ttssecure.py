@@ -352,11 +352,15 @@ def main() -> int:
         if not logo_path.exists():
             logo_path = None
 
+        # Track which reports were generated successfully
+        generated_reports = {}
+
         # PDF Report
         pdf_path = output_dir / f"{report_id}.pdf"
         try:
             generate_pdf_report(aggregated, pdf_path, logo_path)
             logger.info(LogMessages.REPORT_COMPLETE.format(path=pdf_path))
+            generated_reports['PDF'] = pdf_path
         except Exception as e:
             logger.error(LogMessages.REPORT_FAIL.format(format="PDF", error=str(e)))
 
@@ -365,6 +369,7 @@ def main() -> int:
         try:
             generate_html_report(aggregated, html_path, logo_path)
             logger.info(LogMessages.REPORT_COMPLETE.format(path=html_path))
+            generated_reports['HTML'] = html_path
         except Exception as e:
             logger.error(LogMessages.REPORT_FAIL.format(format="HTML", error=str(e)))
 
@@ -373,6 +378,7 @@ def main() -> int:
         try:
             generate_json_report(aggregated, json_path)
             logger.info(LogMessages.REPORT_COMPLETE.format(path=json_path))
+            generated_reports['JSON'] = json_path
         except Exception as e:
             logger.error(LogMessages.REPORT_FAIL.format(format="JSON", error=str(e)))
 
@@ -388,13 +394,15 @@ def main() -> int:
         logger.info(f"  LOW: {stats.low_count}")
         logger.info(f"Risk level: {stats.risk_level} (score: {stats.risk_score})")
 
-        # Output report paths for Jenkins
+        # Output report paths for Jenkins (only show successfully generated reports)
         print(f"\n=== REPORT PATHS ===")
-        print(f"PDF: {pdf_path}")
-        print(f"HTML: {html_path}")
-        print(f"JSON: {json_path}")
+        for report_type, report_path in generated_reports.items():
+            print(f"{report_type}: {report_path}")
         print(f"LOG: {log_file}")
-        print(f"===================\n")
+        if len(generated_reports) < 3:
+            failed_reports = [r for r in ['PDF', 'HTML', 'JSON'] if r not in generated_reports]
+            print(f"FAILED: {', '.join(failed_reports)}")
+        print(f"===================")
 
         # Determine exit code
         if aggregated.statistics.scanners_failed > 0:

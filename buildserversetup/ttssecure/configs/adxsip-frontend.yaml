@@ -7,9 +7,17 @@ project:
   type: "angular"
 
 source:
-  path: "/tts/ttsbuild/ADXSIP/tts-uae-adx-sip-clientside"
+  path: "/tts/ttsbuild/ADXSIP/ADX-SIP"
   git_url: "https://github.com/ttsme/tts-uae-adx-sip-clientside.git"
   default_branch: "main"
+  include_paths:                    # Only scan these paths (relative to source path)
+    - "src"
+    - "dist"
+    - "package.json"
+  exclude_paths:                    # Skip these folders
+    - "node_modules"
+    - ".angular"
+    - "coverage"
 
 metadata:
   developer_team: "ADXSIP Development Team"

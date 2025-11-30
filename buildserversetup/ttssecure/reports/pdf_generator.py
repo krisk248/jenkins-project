@@ -133,6 +133,38 @@ def _get_logo_with_aspect_ratio(logo_path: Path, max_width: float = 2*inch, max_
         return None
 
 
+def _get_centered_logo(logo_path: Path, max_width: float = 4*inch, max_height: float = 1.8*inch) -> Optional[Table]:
+    """Create a centered logo table for cover page."""
+    try:
+        if not logo_path or not Path(logo_path).exists():
+            return None
+
+        # Open with PIL to get dimensions
+        with PILImage.open(logo_path) as pil_img:
+            orig_width, orig_height = pil_img.size
+
+        # Calculate scaling to fit within bounds while preserving aspect ratio
+        width_ratio = max_width / orig_width
+        height_ratio = max_height / orig_height
+        scale = min(width_ratio, height_ratio)
+
+        new_width = orig_width * scale
+        new_height = orig_height * scale
+
+        logo_img = Image(str(logo_path), width=new_width, height=new_height)
+
+        # Wrap in table for centering
+        logo_table = Table([[logo_img]], colWidths=[6*inch])
+        logo_table.setStyle(TableStyle([
+            ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ]))
+
+        return logo_table
+    except Exception:
+        return None
+
+
 def _get_styles() -> Dict[str, ParagraphStyle]:
     """Get custom paragraph styles."""
     base_styles = getSampleStyleSheet()
@@ -234,12 +266,13 @@ def _build_cover_page(
     story = []
     stats = results.statistics
 
-    # Logo with original aspect ratio
-    logo = _get_logo_with_aspect_ratio(logo_path, max_width=2.5*inch, max_height=1.2*inch)
-    if logo:
-        story.append(logo)
-
-    story.append(Spacer(1, 0.5*inch))
+    # Large centered logo for cover page
+    logo_table = _get_centered_logo(logo_path, max_width=4.5*inch, max_height=2*inch)
+    if logo_table:
+        story.append(logo_table)
+        story.append(Spacer(1, 0.3*inch))
+    else:
+        story.append(Spacer(1, 0.5*inch))
 
     # Title
     story.append(Paragraph("SECURITY ASSESSMENT REPORT", styles["title"]))

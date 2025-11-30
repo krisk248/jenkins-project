@@ -69,9 +69,15 @@ class SpotBugsScanner(BaseScanner):
         # Find compiled classes
         classes_dir = self._find_classes_dir(source_path)
         if not classes_dir:
-            return self._create_error_result(
-                "No compiled classes found. Run Maven/Gradle build first.",
-                time.time() - start_time
+            # Skip gracefully instead of failing - project not compiled yet
+            logger.warning(f"[{self.name}] No compiled classes found. Run 'mvn compile' or 'gradle build' first. Skipping...")
+            return ScanResult(
+                scanner_name=self.name,
+                success=True,  # Mark as success (skipped) not failure
+                duration=time.time() - start_time,
+                findings=[],
+                scanner_version=self.get_version() or "unknown",
+                error_message="Skipped: No compiled classes found. Run Maven/Gradle build first."
             )
 
         # Prepare output file

@@ -83,8 +83,13 @@ def _simplify_path(full_path: str, base_folder: str = "") -> str:
     return full_path
 
 
-def _get_logo_html(logo_path: Optional[Path]) -> str:
-    """Generate logo HTML with preserved aspect ratio."""
+def _get_logo_html(logo_path: Optional[Path], large: bool = False) -> str:
+    """Generate logo HTML with preserved aspect ratio.
+
+    Args:
+        logo_path: Path to logo image
+        large: If True, render as large centered logo for header section
+    """
     if logo_path and logo_path.exists():
         # Embed logo as base64 to make HTML self-contained
         try:
@@ -93,9 +98,16 @@ def _get_logo_html(logo_path: Optional[Path]) -> str:
             # Determine mime type
             suffix = logo_path.suffix.lower()
             mime_type = "image/png" if suffix == ".png" else "image/jpeg"
-            return f'''<img src="data:{mime_type};base64,{logo_data}"
-                        alt="TTS Logo"
-                        style="max-height: 60px; max-width: 150px; object-fit: contain;">'''
+
+            if large:
+                # Large centered logo for header
+                return f'''<img src="data:{mime_type};base64,{logo_data}"
+                            alt="TTS Logo"
+                            style="max-height: 100px; max-width: 280px; object-fit: contain;">'''
+            else:
+                return f'''<img src="data:{mime_type};base64,{logo_data}"
+                            alt="TTS Logo"
+                            style="max-height: 60px; max-width: 150px; object-fit: contain;">'''
         except Exception:
             pass
     return ""
@@ -104,7 +116,7 @@ def _get_logo_html(logo_path: Optional[Path]) -> str:
 def _build_html(results: AggregatedResults, logo_path: Optional[Path] = None) -> str:
     """Build HTML content."""
     stats = results.statistics
-    logo_html = _get_logo_html(logo_path)
+    logo_html = _get_logo_html(logo_path, large=True)
 
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -119,14 +131,18 @@ def _build_html(results: AggregatedResults, logo_path: Optional[Path] = None) ->
 </head>
 <body>
     <div class="container">
-        <!-- Header -->
+        <!-- Header with Centered Logo -->
         <header class="header">
-            <div class="logo-section">
-                {logo_html}
-                <h1>TTS Security Assessment Report</h1>
+            <div class="header-top">
+                <div class="logo-centered">
+                    {logo_html}
+                </div>
             </div>
-            <div class="report-id">
-                <strong>Report ID:</strong> {results.report_id}
+            <div class="header-bottom">
+                <h1>TTS Security Assessment Report</h1>
+                <div class="report-id">
+                    <strong>Report ID:</strong> {results.report_id}
+                </div>
             </div>
         </header>
 
@@ -260,9 +276,12 @@ def _get_css() -> str:
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f5f5; color: #333; line-height: 1.6; }
         .container { max-width: 1200px; margin: 0 auto; padding: 20px; background: white; }
 
-        .header { display: flex; justify-content: space-between; align-items: center; padding: 20px; background: #1a365d; color: white; border-radius: 8px; margin-bottom: 20px; }
-        .logo-section { display: flex; align-items: center; gap: 15px; }
-        .header h1 { font-size: 24px; }
+        .header { padding: 25px; background: #1a365d; color: white; border-radius: 8px; margin-bottom: 20px; }
+        .header-top { text-align: center; padding-bottom: 15px; margin-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.2); }
+        .logo-centered { display: flex; justify-content: center; align-items: center; }
+        .logo-centered img { max-height: 100px; max-width: 280px; object-fit: contain; }
+        .header-bottom { display: flex; justify-content: space-between; align-items: center; }
+        .header h1 { font-size: 24px; margin: 0; }
         .report-id { font-size: 14px; }
 
         section { margin-bottom: 30px; padding: 20px; background: #fafafa; border-radius: 8px; border: 1px solid #e0e0e0; }

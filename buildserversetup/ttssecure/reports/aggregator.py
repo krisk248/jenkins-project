@@ -113,7 +113,7 @@ class AggregatedResults:
                 "violations": self.threshold_violations,
             },
             "scanner_results": [r.to_dict() for r in self.scanner_results],
-            "findings": [f.to_dict() for f in self.all_findings[:200]],  # Limit for JSON size
+            "findings": [f.to_dict() for f in self.all_findings],  # Show ALL findings in JSON
         }
 
 

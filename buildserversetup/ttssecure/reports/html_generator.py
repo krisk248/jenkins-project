@@ -436,9 +436,9 @@ def _get_scanner_results_html(scanner_results) -> str:
 
 def _get_findings_html(findings: List[Finding]) -> str:
     """Generate HTML for findings list with table format."""
-    # Group by scanner
+    # Group by scanner - NO LIMIT, show all findings
     by_scanner: Dict[str, List[Finding]] = {}
-    for f in findings[:100]:  # Limit to first 100
+    for f in findings:  # Show ALL findings
         if f.scanner not in by_scanner:
             by_scanner[f.scanner] = []
         by_scanner[f.scanner].append(f)
@@ -461,7 +461,7 @@ def _get_findings_html(findings: List[Finding]) -> str:
                 </thead>
                 <tbody>'''
 
-        for finding in scanner_findings[:30]:  # Limit per scanner
+        for finding in scanner_findings:  # Show ALL findings per scanner
             severity_lower = finding.severity.value.lower()
             simplified_path = _simplify_path(finding.file_path)
 

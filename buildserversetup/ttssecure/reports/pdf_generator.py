@@ -464,10 +464,7 @@ def _build_findings_section(results: AggregatedResults, styles: Dict) -> List:
     story.append(PageBreak())
     story.append(Paragraph("Detailed Findings", styles["heading1"]))
 
-    # Limit findings to prevent huge PDFs
-    max_per_severity = 15
-
-    # Group by severity
+    # Group by severity - NO LIMIT, show all findings
     findings_by_severity = {
         Severity.CRITICAL: [],
         Severity.HIGH: [],
@@ -477,8 +474,7 @@ def _build_findings_section(results: AggregatedResults, styles: Dict) -> List:
 
     for finding in results.all_findings:
         if finding.severity in findings_by_severity:
-            if len(findings_by_severity[finding.severity]) < max_per_severity:
-                findings_by_severity[finding.severity].append(finding)
+            findings_by_severity[finding.severity].append(finding)  # Show ALL findings
 
     severity_colors = {
         Severity.CRITICAL: COLORS["critical"],

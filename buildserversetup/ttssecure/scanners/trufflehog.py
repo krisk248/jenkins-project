@@ -130,10 +130,7 @@ class TruffleHogScanner(BaseScanner):
             except json.JSONDecodeError:
                 continue
 
-            # Limit findings
-            if len(findings) >= self.max_findings:
-                break
-
+        # No limit - return ALL findings
         return findings
 
     def _parse_finding(self, data: dict) -> Finding:

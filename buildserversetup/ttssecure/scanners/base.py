@@ -222,13 +222,13 @@ class BaseScanner(ABC):
 
     def filter_findings(self, findings: List[Finding]) -> List[Finding]:
         """
-        Filter findings by severity and limit count.
+        Filter findings by severity (NO count limit - show all findings).
 
         Args:
             findings: List of all findings
 
         Returns:
-            Filtered list of findings
+            Filtered list of findings (by severity only, no count limit)
         """
         # Filter by severity
         filtered = [
@@ -246,8 +246,8 @@ class BaseScanner(ABC):
         }
         filtered.sort(key=lambda f: severity_order.get(f.severity, 5))
 
-        # Limit count
-        return filtered[:self.max_findings]
+        # Return ALL findings - no limit
+        return filtered
 
     def _create_error_result(self, error_message: str, duration: float) -> ScanResult:
         """Create a ScanResult for error cases."""

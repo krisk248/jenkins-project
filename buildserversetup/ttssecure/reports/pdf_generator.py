@@ -30,6 +30,18 @@ from utils.logger import get_logger
 # Easter egg - hidden message
 _EASTER_EGG = base64.b64encode(b"we grows together-by KG").decode()
 
+
+def _escape_xml(text: str) -> str:
+    """Escape XML/HTML special characters for ReportLab Paragraph."""
+    if not text:
+        return ""
+    # Escape < and > which ReportLab interprets as XML tags
+    text = str(text)
+    text = text.replace("&", "&amp;")  # Must be first
+    text = text.replace("<", "&lt;")
+    text = text.replace(">", "&gt;")
+    return text
+
 # Color definitions
 COLORS = {
     "primary": colors.HexColor("#1a365d"),
@@ -497,25 +509,30 @@ def _build_findings_section(results: AggregatedResults, styles: Dict) -> List:
             # Simplify path
             simple_path = _simplify_path(finding.file_path)
 
-            # Finding table
+            # Finding table - escape all user content to prevent XML parsing errors
+            escaped_rule_id = _escape_xml(finding.rule_id)
+            escaped_path = _escape_xml(simple_path)
+            escaped_cwe = _escape_xml(finding.cwe_id) if finding.cwe_id else ""
+
             finding_data = [
-                [Paragraph(f"<b>{finding.rule_id}</b>", styles["normal"]),
+                [Paragraph(f"<b>{escaped_rule_id}</b>", styles["normal"]),
                  Paragraph(f"<font color='{severity_colors[severity].hexval()}'><b>{severity.value}</b></font>", styles["normal"])],
-                [Paragraph(f"<b>File:</b> {simple_path}", styles["small"]),
+                [Paragraph(f"<b>File:</b> {escaped_path}", styles["small"]),
                  Paragraph(f"<b>Line:</b> {finding.line_number}" if finding.line_number else "", styles["small"])],
             ]
 
             # Add CWE if present
             if finding.cwe_id:
                 finding_data.append([
-                    Paragraph(f"<b>CWE:</b> {finding.cwe_id}", styles["small"]),
+                    Paragraph(f"<b>CWE:</b> {escaped_cwe}", styles["small"]),
                     ""
                 ])
 
-            # Add description
+            # Add description - escape special characters
             desc = finding.description[:200] + "..." if len(finding.description) > 200 else finding.description
+            escaped_desc = _escape_xml(desc)
             finding_data.append([
-                Paragraph(desc, styles["normal"]),
+                Paragraph(escaped_desc, styles["normal"]),
                 ""
             ])
 

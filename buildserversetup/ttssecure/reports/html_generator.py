@@ -5,6 +5,7 @@ Generates web-viewable HTML report with styling.
 """
 
 import base64
+import html
 from pathlib import Path
 from datetime import datetime
 from typing import Dict, List, Optional
@@ -465,23 +466,30 @@ def _get_findings_html(findings: List[Finding]) -> str:
             severity_lower = finding.severity.value.lower()
             simplified_path = _simplify_path(finding.file_path)
 
-            # Build CWE badge if available
-            cwe_html = f'<span class="cwe-badge">{finding.cwe_id}</span>' if finding.cwe_id else ''
+            # Escape all user content to prevent XSS and display issues
+            escaped_path = html.escape(simplified_path) if simplified_path else ''
+            escaped_rule_id = html.escape(finding.rule_id) if finding.rule_id else ''
+            escaped_title = html.escape(finding.title[:100]) if finding.title else ''
+            escaped_cwe = html.escape(finding.cwe_id) if finding.cwe_id else ''
 
-            # Truncate description
+            # Build CWE badge if available
+            cwe_html = f'<span class="cwe-badge">{escaped_cwe}</span>' if escaped_cwe else ''
+
+            # Truncate and escape description
             desc = finding.description[:200] + "..." if len(finding.description) > 200 else finding.description
+            escaped_desc = html.escape(desc) if desc else ''
 
             html += f'''
                 <tr>
                     <td><span class="severity-badge {severity_lower}">{finding.severity.value}</span></td>
                     <td>
-                        <div class="file-path">{simplified_path}</div>
+                        <div class="file-path">{escaped_path}</div>
                         <div class="line-number">Line: {finding.line_number if finding.line_number else 'N/A'}</div>
                     </td>
                     <td>
-                        <div class="rule-id">{finding.rule_id} {cwe_html}</div>
-                        <div class="finding-title">{finding.title[:100]}</div>
-                        <div class="finding-desc">{desc}</div>
+                        <div class="rule-id">{escaped_rule_id} {cwe_html}</div>
+                        <div class="finding-title">{escaped_title}</div>
+                        <div class="finding-desc">{escaped_desc}</div>
                     </td>
                 </tr>'''
 

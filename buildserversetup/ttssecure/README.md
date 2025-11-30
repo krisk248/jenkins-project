@@ -13,17 +13,19 @@ A modular, production-grade security scanning framework for TTS Jenkins CI/CD pi
 
 ## Quick Start
 
-### 1. Install Dependencies
+### 1. Install Dependencies (using pipenv)
 
 ```bash
 cd /home/ttsbuild/jenkins-automation/buildserversetup/ttssecure
 
-# Using pipenv (recommended)
-pipenv install -r requirements.txt
-pipenv shell
+# Install pipenv if not installed
+pip install --user pipenv
 
-# Or using pip directly
-pip install -r requirements.txt
+# Install dependencies from Pipfile
+pipenv install
+
+# Run commands using pipenv run
+pipenv run python ttssecure.py --help
 ```
 
 ### 2. Create Project Configuration
@@ -150,15 +152,34 @@ stage('Security Scan') {
             cd /home/ttsbuild/jenkins-automation/buildserversetup/ttssecure
             pipenv run python ttssecure.py \
                 --config configs/adxsip-backend.yaml \
-                --branch ${GIT_BRANCH} \
-                --build-number ${BUILD_NUMBER}
+                --branch "${GIT_BRANCH}" \
+                --build-number "${BUILD_NUMBER}"
         '''
     }
     post {
         always {
-            archiveArtifacts artifacts: '/tts/securityreports/${PROJECT}/${BUILD_NUMBER}/*.pdf'
+            archiveArtifacts artifacts: '/tts/securityreports/ADXSIP/${BUILD_NUMBER}/*.pdf', allowEmptyArchive: true
         }
     }
+}
+```
+
+### Using Shared Library
+
+```groovy
+// In securityScan.groovy
+def call(Map config = [:]) {
+    def projectConfig = config.get('config', 'configs/adxsip-backend.yaml')
+    def branch = config.get('branch', env.GIT_BRANCH ?: 'main')
+    def buildNum = config.get('buildNumber', env.BUILD_NUMBER ?: '0')
+
+    sh """
+        cd /home/ttsbuild/jenkins-automation/buildserversetup/ttssecure
+        pipenv run python ttssecure.py \\
+            --config ${projectConfig} \\
+            --branch "${branch}" \\
+            --build-number "${buildNum}"
+    """
 }
 ```
 
